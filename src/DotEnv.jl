@@ -2,6 +2,11 @@ module DotEnv
 
 const DOUBLE_QUOTE = '"'
 
+"""
+`DotEnv.parse` accepts a String or an IOBuffer (Any value that
+ can be converted into String), and it will return a Dict with
+ the parsed keys and values.
+"""
 function parse( src )
     res = Dict{String,String}()
     for line in split(String(src), '\n')
@@ -25,6 +30,11 @@ function parse( src )
     res
 end
 
+
+"""
+`config` reads your .env file, parse the content, stores it to `ENV`,
+and finally return a Dict with the content.
+"""
 function config( path=".env" )
     if (isfile(path))
             parsed = parse(String(read(path)))
