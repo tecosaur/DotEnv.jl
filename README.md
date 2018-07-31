@@ -9,7 +9,7 @@ Dotenv is a zero-dependency package that loads environment variables from a `.en
 
 ```julia
 # waiting for julia METADATA.jl approval
-Pkg.clone("https://github.com/vmari/DotEnv.git")
+Pkg.clone("https://github.com/vmari/DotEnv.jl.git")
 ```
 
 ## Usage
@@ -105,4 +105,4 @@ end
 
 ## Note about credits
 
-We want to thank @motdotla to inspire our code, which is mostly based on [his repo](https://github.com/motdotla/dotenv)
+We want to thank @motdotla. Our code is mostly based on [his repo](https://github.com/motdotla/dotenv)
