@@ -1,5 +1,8 @@
 # dotenv
 
+[![Build Status](https://travis-ci.org/vmari/DotEnv.jl.svg?branch=master)](https://travis-ci.org/vmari/DotEnv.jl)
+[![Coverage Status](https://coveralls.io/repos/github/vmari/DotEnv.jl/badge.svg?branch=master)](https://coveralls.io/github/vmari/DotEnv.jl?branch=master)
+
 Dotenv is a zero-dependency package that loads environment variables from a `.env` file into [`ENV`](https://docs.julialang.org/en/latest/manual/environment-variables/). Storing configuration in the environment is based on [The Twelve-Factor App](http://12factor.net/config) methodology.
 
 ## Install
@@ -102,4 +105,4 @@ end
 
 ## Note about credits
 
-We want to thank to @motdotla to inspire our code, which is mostly based on [his repo](https://github.com/motdotla/dotenv)
+We want to thank @motdotla to inspire our code, which is mostly based on [his repo](https://github.com/motdotla/dotenv)
