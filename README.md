@@ -1,4 +1,4 @@
-# dotenv
+# DotEnv.jl
 
 [![Build Status](https://travis-ci.org/vmari/DotEnv.jl.svg?branch=master)](https://travis-ci.org/vmari/DotEnv.jl)
 [![Coverage Status](https://coveralls.io/repos/github/vmari/DotEnv.jl/badge.svg?branch=master)](https://coveralls.io/github/vmari/DotEnv.jl?branch=master)
