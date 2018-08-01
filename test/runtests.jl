@@ -31,7 +31,6 @@ const dir = dirname(@__FILE__)
 
     #shouldn't replace ENV vars
     previous_value = ENV["USER"]
-    println(ENV["USER"])
     cfg = DotEnv.config(file)
 
     @test ENV["USER"] != cfg["USER"]
