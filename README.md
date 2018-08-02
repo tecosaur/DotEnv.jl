@@ -8,8 +8,7 @@ DotEnv.jl is a zero-dependency package that loads environment variables from a `
 ## Install
 
 ```julia
-# waiting for julia METADATA.jl approval
-Pkg.clone("https://github.com/vmari/DotEnv.jl.git")
+Pkg.add("DotEnv")
 ```
 
 ## Usage
