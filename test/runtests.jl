@@ -1,24 +1,14 @@
-using DotEnv
-@static if VERSION < v"0.7.0-DEV.2005"
-    using Base.Test
-else
-    using Test
-end
-
-println("Testing DotEnv")
+using DotEnv, Test
 
 const dir = dirname(@__FILE__)
 
-
 @testset "basic" begin
     #basic input
-    io = IOBuffer("BASIC=basic")
     str = "BASIC=basic"
     file = joinpath(dir, ".env.override")
     file2 = joinpath(dir, ".env")
 
     #iobuffer, string, file
-    @test DotEnv.parse(io) == Dict("BASIC"=>"basic")
     @test DotEnv.parse(str) == Dict("BASIC"=>"basic")
     @test DotEnv.parse(read(file)) == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
     @test DotEnv.config(file) == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
@@ -43,9 +33,7 @@ const dir = dirname(@__FILE__)
     @test DotEnv.load(file) == DotEnv.config(file)
 end
 
-
 @testset "parsing" begin
-
     #comment
     @test DotEnv.parse("#HIMOM") == Dict()
 

@@ -1,7 +1,5 @@
 module DotEnv
 
-const DOUBLE_QUOTE = '"'
-
 """
 `DotEnv.parse` accepts a String or an IOBuffer (Any value that
  can be converted into String), and it will return a Dict with
@@ -13,14 +11,14 @@ function parse( src )
         m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
         if m != nothing
             key = m.captures[1]
-            value = String(m.captures[2])
+            value = string(m.captures[2])
 
             len = value != "" ? length(value) : 0
-            if (len > 0 && value[1] === DOUBLE_QUOTE && value[end] === DOUBLE_QUOTE)
-                value = replace(value, r"\\n"m, "\n")
+            if (len > 0 && value[1] === '"' && value[end] === '"')
+                value = replace(value, r"\\n"m => "\n")
             end
 
-            value = replace(value, r"(^['\u0022]|['\u0022]$)", "")
+            value = replace(value, r"(^['\u0022]|['\u0022]$)" => "")
 
             value = strip(value)
 
