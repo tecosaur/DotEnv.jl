@@ -47,11 +47,6 @@ function config( path=".env" )
 
         return parsed
     else
-        if VERSION < v"1.0.0"
-            warn(".env file not found")
-        else
-            @warn(".env file not found")
-        end
         return nothing
     end
 end
