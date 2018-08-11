@@ -13,7 +13,7 @@ function parse( src )
         m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
         if m != nothing
             key = m.captures[1]
-            value = m.captures[2]
+            value = String(m.captures[2])
 
             len = value != "" ? length(value) : 0
             if (len > 0 && value[1] === DOUBLE_QUOTE && value[end] === DOUBLE_QUOTE)
@@ -37,17 +37,21 @@ and finally return a Dict with the content.
 """
 function config( path=".env" )
     if (isfile(path))
-            parsed = parse(String(read(path)))
+        parsed = parse(String(read(path)))
 
-            for (k, v) in parsed
-                if( !haskey( ENV, k ) )
-                    ENV[k] = v
-                end
+        for (k, v) in parsed
+            if( !haskey( ENV, k ) )
+                ENV[k] = v
             end
+        end
 
-            return parsed
+        return parsed
     else
-        warn(".env file not found")
+        if VERSION < v"1.0.0"
+            warn(".env file not found")
+        else
+            @warn(".env file not found")
+        end
         return nothing
     end
 end
