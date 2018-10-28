@@ -13,8 +13,7 @@ function parse( src )
             key = m.captures[1]
             value = string(m.captures[2])
 
-            len = value != "" ? length(value) : 0
-            if (len > 0 && value[1] === '"' && value[end] === '"')
+            if (length(value) > 0 && value[1] === '"' && value[end] === '"')
                 value = replace(value, r"\\n"m => "\n")
             end
 
