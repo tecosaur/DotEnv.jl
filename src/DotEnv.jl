@@ -32,7 +32,7 @@ end
 `config` reads your .env file, parse the content, stores it to `ENV`,
 and finally return a Dict with the content.
 """
-function config(;path=".env" )
+function config( path=".env" )
     if (isfile(path))
         parsed = parse(String(read(path)))
 
@@ -47,6 +47,8 @@ function config(;path=".env" )
         return nothing
     end
 end
+
+config( ;path=".env" ) = config(path)
 
 load(opts...) = config(opts...)
 
