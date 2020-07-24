@@ -1,0 +1,13 @@
+name = "DotEnv"
+uuid = "0f0abd74-6f0f-405d-bef9-efe04a9a4677"
+author = ["Valentín Mari <valen.mari@ubykuo.com>"]
+version = "0.2.1"
+
+[compat]
+julia = "1.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]

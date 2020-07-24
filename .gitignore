@@ -5,6 +5,10 @@
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
 # Reference: https://intellij-support.jetbrains.com/hc/en-us/articles/206544839
 
+# Manifest.toml will conflict with earlier Julia (e.g. v1.0) during depedency check, so for CI sake it is not checked in.
+# Reference: https://discourse.julialang.org/t/does-manifest-toml-belong-in-the-repository/12029
+Manifest.toml
+
 # User-specific stuff
 .idea/**/workspace.xml
 .idea/**/tasks.xml
