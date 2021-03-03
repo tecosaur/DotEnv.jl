@@ -25,7 +25,7 @@ const dir = dirname(@__FILE__)
     @test DotEnv.config(file).dict == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
 
     #should trigger a warning too, but I cant test that
-    @test isempty(DotEnv.config("inexistentfile.env").dict)
+    @test isempty(DotEnv.config("inexistentfile.env"))
 
     #length of returned values
     @test length(DotEnv.config(file2).dict) === 10

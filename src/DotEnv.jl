@@ -1,6 +1,6 @@
 module DotEnv
 
-import Base: getindex, get
+import Base: getindex, get, isempty
 
 struct EnvDict
     dict::Dict{String, String}
@@ -8,6 +8,7 @@ end
 
 getindex(ed::EnvDict, key) = get(ed.dict, key, ENV[key])
 get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
+isempty(ed::EnvDict) = isempty(ed.dict)
 
 """
 `DotEnv.parse` accepts a String or an IOBuffer (Any value that
