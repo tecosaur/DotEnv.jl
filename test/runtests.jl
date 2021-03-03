@@ -1,4 +1,7 @@
+module TestDotEnv
+
 using DotEnv
+
 @static if VERSION < v"0.7.0-DEV.2005"
     using Base.Test
 else
@@ -19,13 +22,13 @@ const dir = dirname(@__FILE__)
     #iobuffer, string, file
     @test DotEnv.parse(str) == Dict("BASIC"=>"basic")
     @test DotEnv.parse(read(file)) == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
-    @test DotEnv.config(file) == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
+    @test DotEnv.config(file).dict == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
 
     #should trigger a warning too, but I cant test that
-    @test DotEnv.config("inexistentfile.env") == nothing
+    @test isempty(DotEnv.config("inexistentfile.env"))
 
     #length of returned values
-    @test length(DotEnv.config(file2)) === 10
+    @test length(DotEnv.config(file2).dict) === 10
 
     #shouldn't replace ENV vars
     previous_value = ENV["USER"]
@@ -34,11 +37,26 @@ const dir = dirname(@__FILE__)
     @test ENV["USER"] != cfg["USER"]
     @test ENV["USER"] == previous_value
 
-    #appropiately laoded into ENV if CUSTOM_VAL is non existent
+    #appropiately loaded into ENV if CUSTOM_VAL is non existent
     @test ENV["CUSTOMVAL123"] == "yes"
 
+    # Can force override
+    cfg = DotEnv.config(file, true)
+    @test ENV["USER"] == cfg["USER"]
+    @test ENV["USER"] == "replaced value"
+    
+    # Restore previous environment
+    ENV["USER"] = previous_value
+
+    # Test that EnvDict is reading from ENV
+    ENV["SOME_RANDOM_KEY"] = "abc"
+    cfg = DotEnv.config(file)
+    @test !haskey(cfg.dict, "SOME_RANDOM_KEY")
+    @test cfg["SOME_RANDOM_KEY"] == "abc"
+    @test get(cfg, "OTHER_RANDOM_KEY", "zxc") == "zxc"
+
     #test alias
-    @test DotEnv.load(file) == DotEnv.config(file)
+    @test DotEnv.load(file).dict == DotEnv.config(file).dict
 end
 
 
@@ -85,4 +103,4 @@ end
     @test DotEnv.parse("TEST=    ")["TEST"] == ""
 end
 
-
+end # module

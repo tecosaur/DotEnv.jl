@@ -1,5 +1,15 @@
 module DotEnv
 
+import Base: getindex, get, isempty
+
+struct EnvDict
+    dict::Dict{String, String}
+end
+
+getindex(ed::EnvDict, key) = get(ed.dict, key, ENV[key])
+get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
+isempty(ed::EnvDict) = isempty(ed.dict)
+
 """
 `DotEnv.parse` accepts a String or an IOBuffer (Any value that
  can be converted into String), and it will return a Dict with
@@ -7,9 +17,10 @@ module DotEnv
 """
 function parse( src )
     res = Dict{String,String}()
-    for line in split(String(src), '\n')
+    src = IOBuffer(src)
+    for line in eachline(src)
         m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
-        if m != nothing
+        if m !== nothing
             key = m.captures[1]
             value = string(m.captures[2])
 
@@ -32,23 +43,23 @@ end
 `config` reads your .env file, parse the content, stores it to `ENV`,
 and finally return a Dict with the content.
 """
-function config( path=".env" )
+function config( path=".env", override = false)
     if (isfile(path))
-        parsed = parse(String(read(path)))
+        parsed = parse(read(path, String))
 
         for (k, v) in parsed
-            if( !haskey( ENV, k ) )
+            if( !haskey( ENV, k ) || override )
                 ENV[k] = v
             end
         end
 
-        return parsed
+        return EnvDict(parsed)
     else
-        return nothing
+        return EnvDict(Dict{String, String}())
     end
 end
 
-config( ;path=".env" ) = config(path)
+config( ;path=".env", override = true ) = config(path, override)
 
 load(opts...) = config(opts...)
 
