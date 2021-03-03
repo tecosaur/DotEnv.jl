@@ -57,6 +57,7 @@ const dir = dirname(@__FILE__)
 
     #test alias
     @test DotEnv.load(file).dict == DotEnv.config(file).dict
+    @test DotEnv.load(; path = file).dict == DotEnv.config(file).dict
 end
 
 

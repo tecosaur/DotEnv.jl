@@ -43,7 +43,7 @@ end
 `config` reads your .env file, parse the content, stores it to `ENV`,
 and finally return a Dict with the content.
 """
-function config( path=".env", override = false)
+function config( path, override = false)
     if (isfile(path))
         parsed = parse(read(path, String))
 
@@ -59,8 +59,8 @@ function config( path=".env", override = false)
     end
 end
 
-config( ;path=".env", override = true ) = config(path, override)
+config( ;path=".env", override = false ) = config(path, override)
 
-load(opts...) = config(opts...)
+load(opts...; kwargs...) = config(opts...; kwargs...)
 
 end
