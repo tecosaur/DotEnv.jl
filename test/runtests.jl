@@ -12,6 +12,9 @@ println("Testing DotEnv")
 
 const dir = dirname(@__FILE__)
 
+# There is no "USER" variable on windows.
+initial_value = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
+ENV["USER"] = initial_value
 
 @testset "basic" begin
     #basic input
@@ -31,22 +34,13 @@ const dir = dirname(@__FILE__)
     @test length(DotEnv.config(file2).dict) === 10
 
     #shouldn't replace ENV vars
-    previous_value = ENV["USER"]
     cfg = DotEnv.config(file)
 
     @test ENV["USER"] != cfg["USER"]
-    @test ENV["USER"] == previous_value
+    @test ENV["USER"] == initial_value
 
     #appropiately loaded into ENV if CUSTOM_VAL is non existent
     @test ENV["CUSTOMVAL123"] == "yes"
-
-    # Can force override
-    cfg = DotEnv.config(file, true)
-    @test ENV["USER"] == cfg["USER"]
-    @test ENV["USER"] == "replaced value"
-    
-    # Restore previous environment
-    ENV["USER"] = previous_value
 
     # Test that EnvDict is reading from ENV
     ENV["SOME_RANDOM_KEY"] = "abc"
@@ -57,6 +51,20 @@ const dir = dirname(@__FILE__)
 
     #test alias
     @test DotEnv.load(file).dict == DotEnv.config(file).dict
+    @test DotEnv.load(; path = file).dict == DotEnv.config(file).dict
+end
+
+@testset "Override" begin
+    #basic input
+    file = joinpath(dir, ".env.override")
+
+    # Can force override
+    cfg = DotEnv.config(file, true)
+    @test ENV["USER"] == cfg["USER"]
+    @test ENV["USER"] == "replaced value"
+    
+    # Restore previous environment
+    ENV["USER"] = initial_value
 end
 
 
