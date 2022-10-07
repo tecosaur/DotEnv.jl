@@ -19,10 +19,10 @@ function parse( src )
     res = Dict{String,String}()
     src = IOBuffer(src)
     for line in eachline(src)
-        m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
+        m = match(r"^\s*(export\s+)*([\w.-]+)\s*=\s*(.*)?\s*$", line)
         if m !== nothing
-            key = m.captures[1]
-            value = string(m.captures[2])
+            key = m.captures[2]
+            value = string(m.captures[3])
 
             if (length(value) > 0 && value[1] === '"' && value[end] === '"')
                 value = replace(value, r"\\n"m => "\n")

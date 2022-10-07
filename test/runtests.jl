@@ -31,13 +31,16 @@ ENV["USER"] = initial_value
     @test isempty(DotEnv.config("inexistentfile.env"))
 
     #length of returned values
-    @test length(DotEnv.config(file2).dict) === 10
+    @test length(DotEnv.config(file2).dict) === 11
 
     #shouldn't replace ENV vars
     cfg = DotEnv.config(file)
 
     @test ENV["USER"] != cfg["USER"]
     @test ENV["USER"] == initial_value
+
+    # export prefix works
+    @test ENV["PASSWORD"] == "password"
 
     #appropiately loaded into ENV if CUSTOM_VAL is non existent
     @test ENV["CUSTOMVAL123"] == "yes"
