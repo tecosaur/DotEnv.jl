@@ -88,14 +88,14 @@ end
     @test DotEnv.parse("TEST=\"something\"")["TEST"] == "something"
 
     #inner quotes are mantained
-    @test DotEnv.parse("TEST=\"\"json\"\"")["TEST"] == "\"json\""
+    @test DotEnv.parse("TEST='\"json\"'")["TEST"] == "\"json\""
     @test DotEnv.parse("TEST=\"'json'\"")["TEST"] == "'json'"
-    @test DotEnv.parse("TEST=\"\"\"")["TEST"] == "\""
+    @test DotEnv.parse("TEST='\"'")["TEST"] == "\""
     @test DotEnv.parse("TEST=\"'\"")["TEST"] == "'"
 
     #line breaks
-    @test DotEnv.parse("TEST=\"\\n\"")["TEST"] == "" #It's null because of final trim
-    @test DotEnv.parse("TEST=\"\\n\\n\\nsomething\"")["TEST"] == "something"
+    @test DotEnv.parse("TEST=\"\\n\"")["TEST"] == "\n" # It's empty because of final trim
+    @test DotEnv.parse("TEST=\"\\n\\nsomething\"")["TEST"] == "\n\nsomething"
     @test DotEnv.parse("TEST=\"something\\nsomething\"")["TEST"] == "something\nsomething"
     @test DotEnv.parse("TEST=\"something\\n\\nsomething\"")["TEST"] == "something\n\nsomething"
     @test DotEnv.parse("TEST='\\n'")["TEST"] == "\\n"
@@ -104,9 +104,7 @@ end
     #empty vars
     @test DotEnv.parse("TEST=")["TEST"] == ""
 
-    #trim spaces with and without quotes
-    @test DotEnv.parse("TEST='  something  '")["TEST"] == "something"
-    @test DotEnv.parse("TEST=\"  something  \"")["TEST"] == "something"
+    #trim spaces without quotes
     @test DotEnv.parse("TEST=  something  ")["TEST"] == "something"
     @test DotEnv.parse("TEST=    ")["TEST"] == ""
 end

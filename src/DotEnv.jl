@@ -14,29 +14,83 @@ Base.isempty(ed::EnvDict) = isempty(ed.dict)
 Parse the `.env` content `source` into a key-value `Dict{String, String}`.
 """
 function parse(src::IO)
-    res = Dict{String,String}()
+    results = Pair{String, String}[]
     for line in eachline(src)
-        m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
-        if m !== nothing
-            key = m.captures[1]
-            value = string(m.captures[2])
-
-            if (length(value) > 0 && value[1] === '"' && value[end] === '"')
-                value = replace(value, r"\\n"m => "\n")
-            end
-
-            value = replace(value, r"(^['\u0022]|['\u0022]$)" => "")
-
-            value = strip(value)
-
-            push!(res, Pair(key, value))
-        end
+        keyval = tryparseline(line)
+        !isnothing(keyval) && push!(results, keyval)
     end
-    res
+    Dict(results)
 end
 
 parse(src::AbstractString) = parse(IOBuffer(src))
 parse(src::AbstractVector{UInt8}) = parse(IOBuffer(src))
+
+"""
+    tryparseline(line::AbstractString)
+
+Try to parse `line` according to the format introduced by
+https://github.com/bkeepers/dotenv.
+
+Returns a `Pair{String, String}` if parsing was successful, `nothing` otherwise.
+"""
+function tryparseline(line::AbstractString)
+    sline = lstrip(line)
+    all(isspace, sline) || startswith(sline, '#') && return # empty_line
+    startswith(sline, "export") || startswith(sline, "export\t") &&
+        return tryparseline(@view sline[ncodeunits("export")+1:end])
+    keyend = keyend = findfirst(c -> isspace(c) || c in ('=', ':'), sline)
+    isnothing(keyend) && return # no_assignment
+    valoffset = something(findfirst(c -> !isspace(c) && c ∉ ('=', ':'), @view sline[keyend:end]), 2)
+    valstart = keyend + valoffset - 1
+    value = tryreadvalue(@view sline[valstart:end])
+    isnothing(value) && return # malformed_value
+    key = String(@view sline[1:keyend-1])
+    key => String(value)
+end
+
+"""
+    tryreadvalue(valstring::AbstractString)
+
+Try to extract the possibly quoted value from `valstring`, which may be
+succeeded by a #-comment.
+"""
+function tryreadvalue(valstring::AbstractString)
+    isempty(valstring) && return ""
+    valend = if first(valstring) in ('\'', '"')
+        quotechr = first(valstring)
+        point = nextind(valstring, firstindex(valstring))
+        maxpoint = lastindex(valstring)
+        escaped = false
+        while point <= maxpoint
+            if escaped
+                escaped = false
+            elseif valstring[point] == '\\'
+                escaped = true
+            elseif valstring[point] == quotechr
+                break
+            end
+            point = nextind(valstring, point)
+        end
+        valstring[point] != quotechr && return # untermintated_value_quote
+        point
+    else
+        commentstart = findfirst('#', valstring)
+        if !isnothing(commentstart)
+            commentstart - 1
+        else
+            lastindex(valstring)
+        end
+    end
+    postvalue = findfirst(!isspace, @view valstring[nextind(valstring, valend):end])
+    !isnothing(postvalue) && valstring[valend + postvalue] != '#' && return # trailing_garbage
+    if first(valstring) == '"'
+        replace((@view valstring[2:valend-1]), "\\n" => '\n', "\\r" => '\r')
+    elseif first(valstring) == '\''
+        @view valstring[2:valend-1]
+    else
+        rstrip(@view valstring[1:valend])
+    end
+end
 
 """
     config(path::AbstractString, override::Bool=false)
