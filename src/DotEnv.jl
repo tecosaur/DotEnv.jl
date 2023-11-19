@@ -15,7 +15,7 @@ isempty(ed::EnvDict) = isempty(ed.dict)
  can be converted into String), and it will return a Dict with
  the parsed keys and values.
 """
-function parse( src )
+function parse(src)
     res = Dict{String,String}()
     src = IOBuffer(src)
     for line in eachline(src)
@@ -32,7 +32,7 @@ function parse( src )
 
             value = strip(value)
 
-            push!(res, Pair(key, value) )
+            push!(res, Pair(key, value))
         end
     end
     res
@@ -43,12 +43,12 @@ end
 `config` reads your .env file, parse the content, stores it to `ENV`,
 and finally return a Dict with the content.
 """
-function config( path, override = false)
+function config(path, override = false)
     if (isfile(path))
         parsed = parse(read(path, String))
 
         for (k, v) in parsed
-            if( !haskey( ENV, k ) || override )
+            if(!haskey(ENV, k) || override)
                 ENV[k] = v
             end
         end
@@ -59,7 +59,7 @@ function config( path, override = false)
     end
 end
 
-config( ;path=".env", override = false ) = config(path, override)
+config(; path=".env", override = false) = config(path, override)
 
 load(opts...; kwargs...) = config(opts...; kwargs...)
 
