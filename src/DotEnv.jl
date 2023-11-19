@@ -11,11 +11,11 @@ get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
 isempty(ed::EnvDict) = isempty(ed.dict)
 
 """
-`DotEnv.parse` accepts a String or an IOBuffer (Any value that
- can be converted into String), and it will return a Dict with
- the parsed keys and values.
+    parse(source::Union{<:AbstractString, <:AbstractVector{UInt8}, IOBuffer})
+
+Parse the `.env` content `source` into a key-value `Dict{String, String}`.
 """
-function parse(src)
+function parse(src::Union{<:AbstractString, <:AbstractVector{UInt8}, IOBuffer})
     res = Dict{String,String}()
     src = IOBuffer(src)
     for line in eachline(src)
@@ -40,10 +40,13 @@ end
 
 
 """
-`config` reads your .env file, parse the content, stores it to `ENV`,
-and finally return a Dict with the content.
+    config(path::AbstractString, override::Bool=false)
+
+Read the `.env` file `path`, parse its content, and store the result to `ENV`.
+Should override be set, values already present in `ENV` will be replaced with
+statements from `path`.
 """
-function config(path, override = false)
+function config(path::AbstractString, override::Bool=false)
     if (isfile(path))
         parsed = parse(read(path, String))
 
@@ -61,6 +64,6 @@ end
 
 config(; path=".env", override = false) = config(path, override)
 
-load(opts...; kwargs...) = config(opts...; kwargs...)
+const load = config
 
 end
