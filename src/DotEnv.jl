@@ -93,30 +93,29 @@ function tryreadvalue(valstring::AbstractString)
 end
 
 """
-    config(path::AbstractString, override::Bool=false)
+    load(path::AbstractString, override::Bool=false)
 
 Read the `.env` file `path`, parse its content, and store the result to `ENV`.
 Should override be set, values already present in `ENV` will be replaced with
 statements from `path`.
 """
-function config(path::AbstractString, override::Bool=false)
-    if (isfile(path))
-
-        parsed = Dict(open(parse, path))
-        for (k, v) in parsed
-            if(!haskey(ENV, k) || override)
-                ENV[k] = v
-            end
-        end
-
-        return EnvDict(parsed)
-    else
+function load(path::AbstractString = ".env"; override::Bool=false)
+    if !isfile(path)
+        @warn "Dotenv file '$path' does not exist"
         return EnvDict(Dict{String, String}())
     end
+    parsed = Dict(open(parse, path))
+    for (k, v) in parsed
+        if !haskey(ENV, k) || override
+            ENV[k] = v
+        end
+    end
+    EnvDict(parsed)
 end
 
-config(; path=".env", override = false) = config(path, override)
-
-const load = config
+@deprecate load(path, override) load(path; override=override)
+@deprecate config(; path, override=false) load(path; override=override)
+@deprecate config(path, override) load(path; override=override)
+@deprecate config(path) load(path)
 
 end
