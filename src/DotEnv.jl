@@ -101,6 +101,72 @@ function tryreadvalue(valstring::AbstractString)
 end
 
 """
+    interpolate(value::String, dotenv::Dict{String, String}, fallback::AbstractDict{String, String})
+
+Expand interpolations in `value`, returning the final result. Interpolated
+values can be in the form `\$name`, `\${name}`, or `\${name:-default}` (with
+nesting allowed within `default`). Values are looked up in `dotenv` then
+`fallback`, with the empty string used if not present in either.
+"""
+function interpolate(value::String, dotenv::Dict{String, String}, fallback::AbstractDict{String, String})
+    getenv(key) = get(dotenv, key, get(fallback, key, ""))
+    isword(c) = 'a' <= c <= 'z' || 'A' <= c <= 'Z' || '0' <= c <= '9' || c == '_'
+    interpval = IOBuffer()
+    point = prevind(value, firstindex(value))
+    maxpoint = lastindex(value)
+    escaped = false
+    while point < maxpoint
+        point = nextind(value, point)
+        if escaped
+            escaped = false
+            continue
+        elseif value[point] == '\\'
+            escaped = true
+            continue
+        elseif value[point] != '$' || point == maxpoint
+            write(interpval, value[point])
+            continue
+        end
+        point += ncodeunits('$')
+        if value[point] == '{' # ${EXPR}
+            escaped = false
+            depth = 1
+            start = point
+            while point < maxpoint && depth > 0
+                point = nextind(value, point)
+                if escaped
+                    escaped = false
+                elseif value[point] == '\\'
+                    escaped = true
+                elseif value[point] == '{'
+                    depth += 1
+                elseif value[point] == '}'
+                    depth -= 1
+                end
+            end
+            depth > 0 && continue
+            expr = @view value[start+1:point-1]
+            if occursin(":-", expr) # ${NAME:-DEFAULT}
+                key, default = split(expr, ":-", limit=2)
+                if haskey(dotenv, key) || haskey(fallback, key)
+                    write(interpval, getenv(key))
+                else
+                    write(interpval, interpolate(String(default), dotenv, fallback))
+                end
+            else # ${NAME}
+                write(interpval, getenv(expr))
+            end
+        else # $NAME
+            keylen = something(findfirst(!isword, @view value[point:end]), maxpoint - point + 2) - 1
+            key = value[point:point+keylen-1]
+            write(interpval, getenv(key))
+            point = point + keylen - 1
+        end
+    end
+    String(take!(interpval))
+end
+
+"""
     load(path::AbstractString, override::Bool=false)
 
 Read the `.env` file `path`, parse its content, and store the result to `ENV`.

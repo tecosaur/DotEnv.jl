@@ -1,11 +1,11 @@
 module TestDotEnv
 
 using Test
-using DotEnv: parse, _parse, tryparseline, load
+using DotEnv: parse, _parse, tryparseline, interpolate, load
 
 # There is no "USER" variable on windows.
-initial_value = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
-ENV["USER"] = initial_value
+the_user = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
+ENV["USER"] = the_user
 
 @testset "basic" begin
     #basic input
@@ -28,7 +28,7 @@ ENV["USER"] = initial_value
     cfg = load(overfile)
 
     @test ENV["USER"] != cfg["USER"]
-    @test ENV["USER"] == initial_value
+    @test ENV["USER"] == the_user
 
     #appropiately loaded into ENV if CUSTOM_VAL is non existent
     @test ENV["CUSTOMVAL123"] == "yes"
@@ -51,7 +51,7 @@ end
     @test ENV["USER"] == "replaced value"
     
     # Restore previous environment
-    ENV["USER"] = initial_value
+    ENV["USER"] = the_user
 end
 
 
@@ -95,4 +95,17 @@ end
     @test tryparseline("TEST=    ") == ("TEST" => ("", true))
 end
 
-end # module
+@testset "Interpolation" begin
+    @test interpolate("hello", Dict{String, String}(), ENV) == "hello"
+    @test interpolate("hello \$USER", Dict{String, String}(), ENV) == "hello $the_user"
+    @test interpolate("hello \$USER", Dict{String, String}("USER" => "fred"), ENV) == "hello fred"
+    @test interpolate("hello \${USER}", Dict{String, String}(), ENV) == "hello $the_user"
+    @test interpolate("hello \$USER.", Dict{String, String}(), ENV) == "hello $the_user."
+    @test interpolate("hello \$USERR", Dict{String, String}(), ENV) == "hello "
+    @test interpolate("hello \${USERR:-you}", Dict{String, String}(), ENV) == "hello you"
+    @test interpolate("hello \${USERR:-\$USER}", Dict{String, String}(), ENV) == "hello $the_user"
+    @test interpolate("hello \${USERR:-\${USERR:-you}}", Dict{String, String}(), ENV) == "hello you"
+    @test interpolate("hello \${USERR:-\${USERR:-\$USER}}", Dict{String, String}(), ENV) == "hello $the_user"
+end
+
+end
