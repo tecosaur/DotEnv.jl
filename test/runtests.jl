@@ -1,16 +1,7 @@
 module TestDotEnv
 
-using DotEnv
-
-@static if VERSION < v"0.7.0-DEV.2005"
-    using Base.Test
-else
-    using Test
-end
-
-println("Testing DotEnv")
-
-const dir = dirname(@__FILE__)
+using Test
+using DotEnv: parse, tryparseline, load
 
 # There is no "USER" variable on windows.
 initial_value = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
@@ -18,23 +9,23 @@ ENV["USER"] = initial_value
 
 @testset "basic" begin
     #basic input
-    str = "BASIC=basic"
-    file = joinpath(dir, ".env.override")
-    file2 = joinpath(dir, ".env")
+    overfile = joinpath(@__DIR__, ".env.override")
+    envfile = joinpath(@__DIR__, ".env")
 
-    #iobuffer, string, file
-    @test DotEnv.parse(str) == Dict("BASIC"=>"basic")
-    @test DotEnv.parse(read(file)) == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
-    @test DotEnv.config(file).dict == Dict("CUSTOMVAL123"=>"yes","USER"=>"replaced value")
+    #iobuffer, string, overfile
+    @test parse("BASIC=basic") == ["BASIC" => "basic"]
+    @test parse(read(overfile)) == ["USER"=>"replaced value", "CUSTOMVAL123"=>"yes"]
+    @test load(overfile).dict == Dict("USER"=>"replaced value", "CUSTOMVAL123"=>"yes")
 
-    #should trigger a warning too, but I cant test that
-    @test isempty(DotEnv.config("inexistentfile.env"))
+    if VERSION >= v"1.7"
+        @test_warn "does not exist" load("nonexistentfile.env")
+    end
 
     #length of returned values
-    @test length(DotEnv.config(file2).dict) === 10
+    @test length(load(envfile).dict) == 10
 
     #shouldn't replace ENV vars
-    cfg = DotEnv.config(file)
+    cfg = load(overfile)
 
     @test ENV["USER"] != cfg["USER"]
     @test ENV["USER"] == initial_value
@@ -44,22 +35,18 @@ ENV["USER"] = initial_value
 
     # Test that EnvDict is reading from ENV
     ENV["SOME_RANDOM_KEY"] = "abc"
-    cfg = DotEnv.config(file)
+    cfg = load(overfile)
     @test !haskey(cfg.dict, "SOME_RANDOM_KEY")
     @test cfg["SOME_RANDOM_KEY"] == "abc"
     @test get(cfg, "OTHER_RANDOM_KEY", "zxc") == "zxc"
-
-    #test alias
-    @test DotEnv.load(file).dict == DotEnv.config(file).dict
-    @test DotEnv.load(; path = file).dict == DotEnv.config(file).dict
 end
 
 @testset "Override" begin
     #basic input
-    file = joinpath(dir, ".env.override")
+    overfile = joinpath(@__DIR__, ".env.override")
 
     # Can force override
-    cfg = DotEnv.config(file, true)
+    cfg = load(overfile, override=true)
     @test ENV["USER"] == cfg["USER"]
     @test ENV["USER"] == "replaced value"
     
@@ -71,42 +58,40 @@ end
 @testset "parsing" begin
 
     #comment
-    @test DotEnv.parse("#HIMOM") == Dict()
+    @test parse("#HIMOM") isa Vector{Pair{String, String}}
+    @test tryparseline("#HIMOM") === nothing
 
     #spaces without quotes
-    @test begin
-        p = DotEnv.parse("TEST=hi  the  re")
-        count(c -> c == ' ', collect(p["TEST"])) == 4
-    end
+    @test count(' ', last(tryparseline("TEST=hi  the  re"))) == 4
 
     #single quotes
-    @test DotEnv.parse("TEST=''")["TEST"] == ""
-    @test DotEnv.parse("TEST='something'")["TEST"] == "something"
+    @test tryparseline("TEST=''") == ("TEST" => "")
+    @test tryparseline("TEST='something'") == ("TEST" => "something")
 
     #double quotes
-    @test DotEnv.parse("TEST=\"\"")["TEST"] == ""
-    @test DotEnv.parse("TEST=\"something\"")["TEST"] == "something"
+    @test tryparseline("TEST=\"\"") == ("TEST" => "")
+    @test tryparseline("TEST=\"something\"") == ("TEST" => "something")
 
     #inner quotes are mantained
-    @test DotEnv.parse("TEST='\"json\"'")["TEST"] == "\"json\""
-    @test DotEnv.parse("TEST=\"'json'\"")["TEST"] == "'json'"
-    @test DotEnv.parse("TEST='\"'")["TEST"] == "\""
-    @test DotEnv.parse("TEST=\"'\"")["TEST"] == "'"
+    @test tryparseline("TEST='\"json\"'") == ("TEST" => "\"json\"")
+    @test tryparseline("TEST=\"'json'\"") == ("TEST" => "'json'")
+    @test tryparseline("TEST='\"'") == ("TEST" => "\"")
+    @test tryparseline("TEST=\"'\"") == ("TEST" => "'")
 
     #line breaks
-    @test DotEnv.parse("TEST=\"\\n\"")["TEST"] == "\n" # It's empty because of final trim
-    @test DotEnv.parse("TEST=\"\\n\\nsomething\"")["TEST"] == "\n\nsomething"
-    @test DotEnv.parse("TEST=\"something\\nsomething\"")["TEST"] == "something\nsomething"
-    @test DotEnv.parse("TEST=\"something\\n\\nsomething\"")["TEST"] == "something\n\nsomething"
-    @test DotEnv.parse("TEST='\\n'")["TEST"] == "\\n"
-    @test DotEnv.parse("TEST=\\n")["TEST"] == "\\n"
+    @test tryparseline("TEST=\"\\n\"") == ("TEST" => "\n") # It's empty because of final trim
+    @test tryparseline("TEST=\"\\n\\nsomething\"") == ("TEST" => "\n\nsomething")
+    @test tryparseline("TEST=\"something\\nsomething\"") == ("TEST" => "something\nsomething")
+    @test tryparseline("TEST=\"something\\n\\nsomething\"") == ("TEST" => "something\n\nsomething")
+    @test tryparseline("TEST='\\n'") == ("TEST" => "\\n")
+    @test tryparseline("TEST=\\n") == ("TEST" => "\\n")
 
     #empty vars
-    @test DotEnv.parse("TEST=")["TEST"] == ""
+    @test tryparseline("TEST=") == ("TEST" => "")
 
     #trim spaces without quotes
-    @test DotEnv.parse("TEST=  something  ")["TEST"] == "something"
-    @test DotEnv.parse("TEST=    ")["TEST"] == ""
+    @test tryparseline("TEST=  something  ") == ("TEST" => "something")
+    @test tryparseline("TEST=    ") == ("TEST" => "")
 end
 
 end # module
