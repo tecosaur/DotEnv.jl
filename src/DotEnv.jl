@@ -1,12 +1,28 @@
 module DotEnv
 
-struct EnvDict
-    dict::Dict{String, String}
+struct EnvOverlay{B <: AbstractDict{String, String}} <: AbstractDict{String, String}
+    base::B
+    overlay::Dict{String, String}
 end
 
-Base.getindex(ed::EnvDict, key) = get(ed.dict, key, ENV[key])
-Base.get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
-Base.isempty(ed::EnvDict) = isempty(ed.dict)
+function Base.getindex(eo::EnvOverlay, key::AbstractString)
+    if haskey(eo.overlay, key)
+        eo.overlay[key]
+    elseif haskey(eo.base, key)
+        eo.base[key]
+    else
+        throw(KeyError(key))
+    end
+end
+Base.get(eo::EnvOverlay, key::AbstractString, default) = get(eo.overlay, key, get(eo.base, key, default))
+Base.in(eo::EnvOverlay, key::AbstractString) = key in eo.overlay || key in eo.base
+Base.isempty(eo::EnvOverlay) = isempty(eo.overlay)
+Base.length(eo::EnvOverlay) = length(eo.overlay)
+Base.iterate(eo::EnvOverlay) = iterate(eo.overlay)
+Base.iterate(eo::EnvOverlay, i) = iterate(eo.overlay, i)
+
+const ENV_STACKS = IdDict{AbstractDict{String, String}, Vector{Pair{String, Vector{Pair{String, Tuple{String, Bool}}}}}}()
+const ENV_ORIGINALS = IdDict{AbstractDict{String, String}, Dict{String, String}}()
 
 """
     _parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
@@ -100,6 +116,15 @@ function tryreadvalue(valstring::AbstractString)
     end
 end
 
+function loadexpand!(dotenv::Dict{String, String}, (key, (val, interp))::Pair{String, Tuple{String, Bool}}, fallback::AbstractDict{String, String}=ENV)
+    dotenv[key] = if !interp || !occursin('$', val)
+        val
+    else
+        interpolate(val, dotenv, fallback)
+    end
+    dotenv
+end
+
 """
     interpolate(value::String, dotenv::Dict{String, String}, fallback::AbstractDict{String, String})
 
@@ -167,29 +192,48 @@ function interpolate(value::String, dotenv::Dict{String, String}, fallback::Abst
 end
 
 """
-    load(path::AbstractString, override::Bool=false)
+    config(src::IO; env::AbstractDict{String, String} = ENV)
+    config(path::AbstractString = ".env"; env::AbstractDict{String, String} = ENV)
 
-Read the `.env` file `path`, parse its content, and store the result to `ENV`.
-Should override be set, values already present in `ENV` will be replaced with
+Read the dotenv file `src`/`path` and return an `EnvOverlay` of its values,
+expanding interpolated values with `env`.
+
+Should the file `path` exist, an empty `EnvOverlay` is silently returned.
+"""
+function config(entries::Vector{Pair{String, Tuple{String, Bool}}}; env::AbstractDict{String, String} = ENV)
+    dotenv = Dict{String, String}()
+    for entry in entries
+        loadexpand!(dotenv, entry, env)
+    end
+    EnvOverlay(env, dotenv)
+end
+
+config(src::IO; env::AbstractDict{String, String} = ENV) =
+    config(_parse(src); env)
+
+function config(path::AbstractString = ".env"; env::AbstractDict{String, String} = ENV)
+    !isfile(path) && return EnvOverlay(env, Dict{String, String}())
+    config(open(_parse, src); env)
+end
+
+"""
+    load(path::AbstractString; override::Bool=false, env = ENV)
+
+Read the `.env` file `path`, parse its content, and store the result to `env`.
+Should `override` be set, values already present in `env` will be replaced with
 statements from `path`.
 """
-function load(path::AbstractString = ".env"; override::Bool=false)
+function load(path::AbstractString = ".env"; override::Bool=false, env::AbstractDict{String, String} = ENV)
     if !isfile(path)
         @warn "Dotenv file '$path' does not exist"
         return EnvDict(Dict{String, String}())
     end
-    parsed = open(_parse, path)
-    for (k, (v, _)) in parsed
-        if !haskey(ENV, k) || override
-            ENV[k] = v
+    cfg = config(path, env)
+    for (key, val) in cfg.dict
+        if !haskey(env, key) || override
+            env[key] = val
         end
     end
-    EnvDict(Dict{String, String}(Iterators.map(kqv -> first(kqv) => first(last(kqv)), parsed)))
 end
-
-@deprecate load(path, override) load(path; override=override)
-@deprecate config(; path, override=false) load(path; override=override)
-@deprecate config(path, override) load(path; override=override)
-@deprecate config(path) load(path)
 
 end

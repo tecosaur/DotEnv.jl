@@ -33,7 +33,7 @@ ENV["USER"] = the_user
     #appropiately loaded into ENV if CUSTOM_VAL is non existent
     @test ENV["CUSTOMVAL123"] == "yes"
 
-    # Test that EnvDict is reading from ENV
+    # Test that EnvOverlay is reading from ENV
     ENV["SOME_RANDOM_KEY"] = "abc"
     cfg = load(overfile)
     @test !haskey(cfg.dict, "SOME_RANDOM_KEY")
