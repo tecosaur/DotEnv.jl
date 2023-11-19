@@ -1,0 +1,93 @@
+#+title: DotEnv.jl
+#+author: tecosaur
+
+#+html: <a href="https://github.com/tecosaur/DotEnv.jl/actions?query=workflow%3Aci"><img src="https://github.com/tecosaur/DotEnv.jl/actions/workflows/ci.yml/badge.svg"></a>
+#+html: <a href="https://coveralls.io/github/tecosaur/DotEnv.jl"><img src="https://coveralls.io/repos/github/tecosaur/DotEnv.jl/badge.svg"></a>
+
+DotEnv.jl is a lightweight package that loads environment variables from =.env=
+files into [[https://docs.julialang.org/en/latest/manual/environment-variables/][=ENV=]]. Storing configuration in the environment is based on [[http://12factor.net/config][The
+Twelve-Factor App]] methodology.
+
+Please don't store secrets in dotenv files, and if you must at least ensure the
+dotenv file(s) are listed in =.gitignore=.
+
+* Usage
+
+#+begin_src julia
+using DotEnv
+DotEnv.load!()
+#+end_src
+
+Create a =.env= file in your project. You can add environment-specific variables
+using the rule =NAME=VALUE=.  For example:
+
+#+begin_src conf
+#.env file
+DB_HOST=127.0.0.1
+DB_USER=john
+DB_PASS=42
+#+end_src
+
+When ~DotEnv.load!()~ is called, all variables declared in the =.env= file that
+are not already present in =ENV= are loaded into it.
+
+#+begin_src julia
+julia> ENV["DB_PASS"]
+"42"
+#+end_src
+
+To load variables from dotenv files even when they are already present in the
+environment dictionary, pass =override = true= to ~DotEnv.load!~.
+
+* Unloading environment changes
+
+~DotEnv.unload!()~ will reverse the changes of ~DotEnv.load!()~.
+
+This works even when the environment is modified incrementally (i.e. loading
+files one at a time).
+
+* Read a dotenv file
+
+~config~ reads a dotenv file, parse the content, applies variable expansion, but
+does _not_ modify the base environment dictionary.
+
+#+begin_src julia
+julia> using DotEnv
+
+julia> cfg = DotEnv.config() # defaults to reading `.env`
+DotEnv.EnvOverlay{Base.EnvDict} with 3 entries:
+  "DB_PASS" => "42"
+  "DB_HOST" => "127.0.0.1"
+  "DB_USER" => "john"
+#+end_src
+
+* Parsing
+
+~DotEnv.parse~ accepts a ~String~ or an ~IOBuffer~ (Any value that can be converted into ~String~), and it will return
+a ~Dict~ with the parsed keys and values.
+
+#+begin_src julia
+julia> using DotEnv
+
+julia> DotEnv.parse("FOO=bar\nBAR=baz")
+Dict{String, String} with 2 entries:
+  "FOO" => "bar"
+  "BAR" => "baz"
+#+end_src
+
+** Parsing Rules
+
+1. Leading whitespace is ignored
+2. Empty lines, and lines starting with =#= are skipped
+3. =export= prefixes are ignored (e.g. =export FOO=bar=)
+4. Empty assignments are regarded as the empty string(=EMPTY== becomes ~"EMPTY" => ""~)
+5. Keys and values are separated by === or =:=, and any amount of whitespace
+6. All values are strings, but can be quoted with single (='=) or double quotes (="=)
+7. Quotes of the same type may occur within quoted values, but must be escaped with =\=
+8. Inline comments are started with a =#= outside of a quoted value
+9. Inside double quoted values, =\n= newlines are expanded, allowing for multiline values
+10. Extra spaces are removed from both ends of an unquoted value (e.g. =FOO= some
+    value = becomes ~"FOO" => "some value"~)
+11. Variable expansion occurs within unquoted and double-quoted values. =$NAME=,
+    =${NAME}=, and =${NAME:-default}= expansions are all supported.
+12. Malformed lines are silently skipped
