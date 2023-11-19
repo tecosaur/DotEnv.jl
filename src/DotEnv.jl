@@ -11,13 +11,12 @@ get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
 isempty(ed::EnvDict) = isempty(ed.dict)
 
 """
-    parse(source::Union{<:AbstractString, <:AbstractVector{UInt8}, IOBuffer})
+    parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
 
 Parse the `.env` content `source` into a key-value `Dict{String, String}`.
 """
-function parse(src::Union{<:AbstractString, <:AbstractVector{UInt8}, IOBuffer})
+function parse(src::IO)
     res = Dict{String,String}()
-    src = IOBuffer(src)
     for line in eachline(src)
         m = match(r"^\s*([\w.-]+)\s*=\s*(.*)?\s*$", line)
         if m !== nothing
@@ -38,6 +37,8 @@ function parse(src::Union{<:AbstractString, <:AbstractVector{UInt8}, IOBuffer})
     res
 end
 
+parse(src::AbstractString) = parse(IOBuffer(src))
+parse(src::AbstractVector{UInt8}) = parse(IOBuffer(src))
 
 """
     config(path::AbstractString, override::Bool=false)
