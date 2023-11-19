@@ -13,7 +13,8 @@ function Base.getindex(eo::EnvOverlay, key::AbstractString)
     end
 end
 Base.get(eo::EnvOverlay, key::AbstractString, default) = get(eo.overlay, key, get(eo.base, key, default))
-Base.in(eo::EnvOverlay, key::AbstractString) = key in eo.overlay || key in eo.base
+Base.haskey(eo::EnvOverlay, key::AbstractString) = haskey(eo.overlay, key) || haskey(eo.base, key)
+Base.in(eo::EnvOverlay, keyval::Pair{<:AbstractString, <:AbstractString}) = keyval in eo.overlay || keyval in eo.base
 Base.isempty(eo::EnvOverlay) = isempty(eo.overlay)
 Base.length(eo::EnvOverlay) = length(eo.overlay)
 Base.iterate(eo::EnvOverlay) = iterate(eo.overlay)

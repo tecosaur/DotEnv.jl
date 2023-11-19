@@ -91,7 +91,11 @@ end
     cfg = config(".env.local")
     @test !haskey(cfg.overlay, "SOME_RANDOM_KEY")
     @test cfg["SOME_RANDOM_KEY"] == "abc"
+    @test haskey(cfg, "SOME_RANDOM_KEY")
+    @test ("SOME_RANDOM_KEY" => "abc") in cfg
     @test get(cfg, "OTHER_RANDOM_KEY", "zxc") == "zxc"
+    @test !isempty(cfg)
+    @test_throws KeyError cfg["NON_EXISTENT_KEY"]
 end
 
 @testset "Load and unload" begin
