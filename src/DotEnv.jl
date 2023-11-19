@@ -1,14 +1,12 @@
 module DotEnv
 
-import Base: getindex, get, isempty
-
 struct EnvDict
     dict::Dict{String, String}
 end
 
-getindex(ed::EnvDict, key) = get(ed.dict, key, ENV[key])
-get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
-isempty(ed::EnvDict) = isempty(ed.dict)
+Base.getindex(ed::EnvDict, key) = get(ed.dict, key, ENV[key])
+Base.get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
+Base.isempty(ed::EnvDict) = isempty(ed.dict)
 
 """
     parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
