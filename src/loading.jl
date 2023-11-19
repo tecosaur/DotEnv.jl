@@ -35,19 +35,26 @@ function config(path::AbstractString = ".env"; env::AbstractDict{String, String}
 end
 
 """
-    load!([env=ENV], path::AbstractString = ".env"; override::Bool=false)
+    load!([env=ENV], path::AbstractString = ""; override::Bool=false)
 
-Read the `.env` file `path`, parse its content, and store the result to `env`.
+Load the dotenv file `path`, or should `path` be a directory every
+`ENV_FILENAME` that lies within it, into `env`.
+
 Should `override` be set, values already present in `env` will be replaced with
-statements from `path`.
+statements from the dotenv file(s).
 """
-function load!(env::AbstractDict{String, String}, path::AbstractString = ".env"; override::Bool=false)
-    isfile(path) || return EnvOverlay(env, Dict{String, String}())
-    unload!(env, path)
-    entries = open(_parse, path)
+function load!(env::AbstractDict{String, String}, files::Vector{<:AbstractString}; override::Bool=false)
+    unload!(env, files)
+    for file in files
+        entries = open(_parse, file)
+        stack = get!(() -> Pair{String, Vector{Pair{String, Tuple{String, Bool}}}}[], ENV_STACKS, env)
+        push!(stack, EnvFile(abspath(file), entries, override))
+        load!(env, entries; override)
+    end
+end
+
+function load!(env::AbstractDict{String, String}, entries::Vector{EnvEntry}; override::Bool=false)
     orig = get!(() -> Dict{String, Union{String, Nothing}}(), ENV_ORIGINALS, env)
-    stack = get!(() -> Pair{String, Vector{Pair{String, Tuple{String, Bool}}}}[], ENV_STACKS, env)
-    push!(stack, EnvFile(abspath(path), entries, override))
     cfg = config(entries; env, override)
     for (key, val) in cfg.overlay
         if !haskey(env, key)
@@ -60,45 +67,66 @@ function load!(env::AbstractDict{String, String}, path::AbstractString = ".env";
     end
 end
 
-load!(path::AbstractString = ".env"; override::Bool=false) = load!(ENV, path; override)
+function load!(env::AbstractDict{String, String}, path::AbstractString = ""; override::Bool=false)
+    path = abspath(path)
+    if isdir(path)
+        envfiles = filter(isfile, map(f -> joinpath(path, f), ENV_FILENAMES))
+        if !isempty(envfiles)
+            load!(env, if override envfiles else reverse(envfiles) end; override)
+        elseif path != dirname(path) # Try a parent directory
+            load!(env, dirname(path); override)
+        end
+    else
+        load!(env, [path]; override)
+    end
+end
+
+load!(path::AbstractString = ""; override::Bool=false) = load!(ENV, path; override)
 
 """
     unload!(env::AbstractDict{String, String}, path::AbstractString)
-    unload!(ENV, path::AbstractString = ".env")
+    unload!(ENV, path::AbstractString = "")
 
-Unload the dotenv file `path` from `env`. When `env` is omitted, `ENV` is used
-and a default `path` of `.env` is used.
+Unload the dotenv file `path` from `env`, or should `path` be a directory every
+`ENV_FILENAMES` that lies within it.
+
+When `env` is omitted, `ENV` is used and a `path` defaults to the current directory.
 """
-function unload!(env::AbstractDict{String, String}, path::AbstractString)
-    uabspath = abspath(path)
-    (!haskey(ENV_STACKS, env) || !any(e -> e.path == uabspath, ENV_STACKS[env])) && return env
+function unload!(env::AbstractDict{String, String}, files::Vector{<:AbstractString})
+    absfiles = map(abspath, files)
+    (!haskey(ENV_STACKS, env) || !any(e -> e.path in absfiles, ENV_STACKS[env])) && return env
     stack = deepcopy(ENV_STACKS[env])
     unload!(env)
-    orig = ENV_ORIGINALS[env] = Dict{String, Union{String, Nothing}}()
+    ENV_ORIGINALS[env] = Dict{String, Union{String, Nothing}}()
     newstack = ENV_STACKS[env] = Vector{EnvFile}()
     for envfile in stack
-        envfile.path == uabspath && continue
+        envfile.path in absfiles && continue
         push!(newstack, envfile)
-        cfg = config(envfile.entries; env, override=envfile.override)
-        for (key, val) in cfg.overlay
-            if !haskey(env, key)
-                orig[key] = nothing
-                env[key] = val
-            elseif envfile.override
-                get!(orig, key, env[key])
-                env[key] = val
-            end
-        end
+        load!(env, envfile.entries; override=envfile.override)
     end
     env
 end
 
-unload!(path::AbstractString = ".env") = unload!(ENV, path)
+function unload!(env::AbstractDict{String, String}, path::AbstractString)
+    path = abspath(path)
+    if isdir(path)
+        envfiles = filter(isfile, map(f -> joinpath(path, f), ENV_FILENAMES))
+        if !isempty(envfiles)
+            unload!(env, envfiles)
+        elseif path != dirname(path)
+            unload!(env, dirname(path))
+        end
+    else
+        unload!(env, [path])
+    end
+end
+
+unload!(path::AbstractString = "") = unload!(ENV, path)
 
 """
     unload!(env::AbstractDict{String, String})
 
-Unload all dotenv modifications to `env`.
+Undo all dotenv modifications to `env`.
 """
 function unload!(env::AbstractDict{String, String})
     orig = get!(() -> Dict{String, Union{String, Nothing}}(), ENV_ORIGINALS, env)

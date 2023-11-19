@@ -62,11 +62,11 @@ end
 end
 
 @testset "Basic" begin
-    #iobuffer, string, .env.override
+    #iobuffer, string, .env.local
     @test _parse("BASIC=basic") == [EnvEntry("BASIC", "basic", true)]
-    @test _parse(read(".env.override")) == [EnvEntry("USER", "replaced value", true), EnvEntry("CUSTOMVAL123", "yes", true)]
-    @test config(".env.override").overlay == Dict("CUSTOMVAL123"=>"yes")
-    @test config(".env.override", override=true).overlay == Dict("USER"=>"replaced value", "CUSTOMVAL123"=>"yes")
+    @test _parse(read(".env.local")) == [EnvEntry("USER", "replaced value", true), EnvEntry("CUSTOMVAL123", "yes", true)]
+    @test config(".env.local").overlay == Dict("CUSTOMVAL123"=>"yes")
+    @test config(".env.local", override=true).overlay == Dict("USER"=>"replaced value", "CUSTOMVAL123"=>"yes")
 
     @test config("nonexistentfile.env") isa Any # No error
 
@@ -74,11 +74,11 @@ end
     @test length(config(".env", override=true).overlay) == 10
 
     #shouldn't replace ENV vars
-    cfg = config(".env.override")
+    cfg = config(".env.local")
     @test ENV["USER"] == cfg["USER"] == the_user
 
     # Now with override
-    cfg = config(".env.override", override=true)
+    cfg = config(".env.local", override=true)
 
     @test ENV["USER"] != cfg["USER"]
     @test ENV["USER"] == the_user
@@ -88,7 +88,7 @@ end
 
     # Test that EnvOverlay is reading from ENV
     ENV["SOME_RANDOM_KEY"] = "abc"
-    cfg = config(".env.override")
+    cfg = config(".env.local")
     @test !haskey(cfg.overlay, "SOME_RANDOM_KEY")
     @test cfg["SOME_RANDOM_KEY"] == "abc"
     @test get(cfg, "OTHER_RANDOM_KEY", "zxc") == "zxc"
@@ -97,14 +97,14 @@ end
 @testset "Load and unload" begin
     virginenv = Dict{String, String}(ENV)
     envvals = config(".env", env=Dict{String, String}())
-    overridevals = config(".env.override", env=Dict{String, String}())
+    overridevals = config(".env.local", env=Dict{String, String}())
     myenv = Dict{String, String}()
     load!(myenv, ".env")
     @test length(DotEnv.ENV_STACKS[myenv]) == 1
     for key in keys(envvals)
         @test myenv[key] == envvals[key]
     end
-    load!(myenv, ".env.override")
+    load!(myenv, ".env.local")
     @test length(DotEnv.ENV_STACKS[myenv]) == 2
     for key in keys(overridevals)
         if haskey(envvals, key)
@@ -113,7 +113,7 @@ end
             @test myenv[key] == overridevals[key]
         end
     end
-    load!(myenv, ".env.override", override=true)
+    load!(myenv, ".env.local", override=true)
     @test length(DotEnv.ENV_STACKS[myenv]) == 2
     for key in keys(overridevals)
         if haskey(overridevals, key)
@@ -131,7 +131,7 @@ end
             @test !haskey(ENV, key)
         end
     end
-    unload!(myenv, ".env.override")
+    unload!(myenv, ".env.local")
     @test isempty(myenv)
     # Now with `ENV`
     load!(".env")
@@ -142,7 +142,7 @@ end
             @test ENV[key] == envvals[key]
         end
     end
-    load!(".env.override")
+    load!(".env.local")
     for key in keys(overridevals)
         if haskey(virginenv, key)
             @test ENV[key] == virginenv[key]
@@ -152,7 +152,7 @@ end
             @test ENV[key] == overridevals[key]
         end
     end
-    load!(".env.override", override=true)
+    load!(".env.local", override=true)
     for key in keys(overridevals)
         if haskey(overridevals, key)
             @test ENV[key] == overridevals[key]
@@ -172,7 +172,7 @@ end
             @test !haskey(ENV, key)
         end
     end
-    unload!(".env.override")
+    unload!(".env.local")
     for key in keys(overridevals)
         if !haskey(virginenv, key)
             @test !haskey(ENV, key)
@@ -180,6 +180,23 @@ end
     end
     @test length(ENV) == length(virginenv)
     @test Dict{String, String}(ENV) == virginenv
+end
+
+@testset "Multiple env files" begin
+    myenv1 = Dict{String, String}()
+    myenv2 = Dict{String, String}()
+    load!(myenv1)
+    load!(myenv2, ".env.local")
+    load!(myenv2, ".env")
+    @test myenv1 == myenv2
+    myenv3 = Dict{String, String}()
+    load!(myenv3, override=true)
+    @test myenv1 == myenv3
+    unload!(myenv1)
+    @test isempty(myenv1)
+    unload!(myenv2, ".env")
+    unload!(myenv2, ".env.local")
+    @test isempty(myenv2)
 end
 
 end
