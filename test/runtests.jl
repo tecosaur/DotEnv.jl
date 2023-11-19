@@ -1,7 +1,7 @@
 module TestDotEnv
 
 using Test
-using DotEnv: parse, tryparseline, load
+using DotEnv: parse, _parse, tryparseline, load
 
 # There is no "USER" variable on windows.
 initial_value = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
@@ -13,8 +13,8 @@ ENV["USER"] = initial_value
     envfile = joinpath(@__DIR__, ".env")
 
     #iobuffer, string, overfile
-    @test parse("BASIC=basic") == ["BASIC" => "basic"]
-    @test parse(read(overfile)) == ["USER"=>"replaced value", "CUSTOMVAL123"=>"yes"]
+    @test _parse("BASIC=basic") == ["BASIC" => ("basic", true)]
+    @test _parse(read(overfile)) == ["USER" => ("replaced value", true), "CUSTOMVAL123" => ("yes", true)]
     @test load(overfile).dict == Dict("USER"=>"replaced value", "CUSTOMVAL123"=>"yes")
 
     if VERSION >= v"1.7"
@@ -58,40 +58,41 @@ end
 @testset "parsing" begin
 
     #comment
-    @test parse("#HIMOM") isa Vector{Pair{String, String}}
+    @test _parse("#HIMOM") isa Vector{Pair{String, Tuple{String, Bool}}}
+    @test parse("#HIMOM") isa Dict{String, String}
     @test tryparseline("#HIMOM") === nothing
 
     #spaces without quotes
-    @test count(' ', last(tryparseline("TEST=hi  the  re"))) == 4
+    @test count(' ', first(last(tryparseline("TEST=hi  the  re")))) == 4
 
     #single quotes
-    @test tryparseline("TEST=''") == ("TEST" => "")
-    @test tryparseline("TEST='something'") == ("TEST" => "something")
+    @test tryparseline("TEST=''") == ("TEST" => ("", false))
+    @test tryparseline("TEST='something'") == ("TEST" => ("something", false))
 
     #double quotes
-    @test tryparseline("TEST=\"\"") == ("TEST" => "")
-    @test tryparseline("TEST=\"something\"") == ("TEST" => "something")
+    @test tryparseline("TEST=\"\"") == ("TEST" => ("", true))
+    @test tryparseline("TEST=\"something\"") == ("TEST" => ("something", true))
 
     #inner quotes are mantained
-    @test tryparseline("TEST='\"json\"'") == ("TEST" => "\"json\"")
-    @test tryparseline("TEST=\"'json'\"") == ("TEST" => "'json'")
-    @test tryparseline("TEST='\"'") == ("TEST" => "\"")
-    @test tryparseline("TEST=\"'\"") == ("TEST" => "'")
+    @test tryparseline("TEST='\"json\"'") == ("TEST" => ("\"json\"", false))
+    @test tryparseline("TEST=\"'json'\"") == ("TEST" => ("'json'", true))
+    @test tryparseline("TEST='\"'") == ("TEST" => ("\"", false))
+    @test tryparseline("TEST=\"'\"") == ("TEST" => ("'", true))
 
     #line breaks
-    @test tryparseline("TEST=\"\\n\"") == ("TEST" => "\n") # It's empty because of final trim
-    @test tryparseline("TEST=\"\\n\\nsomething\"") == ("TEST" => "\n\nsomething")
-    @test tryparseline("TEST=\"something\\nsomething\"") == ("TEST" => "something\nsomething")
-    @test tryparseline("TEST=\"something\\n\\nsomething\"") == ("TEST" => "something\n\nsomething")
-    @test tryparseline("TEST='\\n'") == ("TEST" => "\\n")
-    @test tryparseline("TEST=\\n") == ("TEST" => "\\n")
+    @test tryparseline("TEST=\"\\n\"") == ("TEST" => ("\n", true)) # It's empty because of final trim
+    @test tryparseline("TEST=\"\\n\\nsomething\"") == ("TEST" => ("\n\nsomething", true))
+    @test tryparseline("TEST=\"something\\nsomething\"") == ("TEST" => ("something\nsomething", true))
+    @test tryparseline("TEST=\"something\\n\\nsomething\"") == ("TEST" => ("something\n\nsomething", true))
+    @test tryparseline("TEST='\\n'") == ("TEST" => ("\\n", false))
+    @test tryparseline("TEST=\\n") == ("TEST" => ("\\n", true))
 
     #empty vars
-    @test tryparseline("TEST=") == ("TEST" => "")
+    @test tryparseline("TEST=") == ("TEST" => ("", true))
 
     #trim spaces without quotes
-    @test tryparseline("TEST=  something  ") == ("TEST" => "something")
-    @test tryparseline("TEST=    ") == ("TEST" => "")
+    @test tryparseline("TEST=  something  ") == ("TEST" => ("something", true))
+    @test tryparseline("TEST=    ") == ("TEST" => ("", true))
 end
 
 end # module

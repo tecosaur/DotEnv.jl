@@ -9,12 +9,12 @@ Base.get(ed::EnvDict, key, default) = get(ed.dict, key, get(ENV, key, default))
 Base.isempty(ed::EnvDict) = isempty(ed.dict)
 
 """
-    parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
+    _parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
 
-Parse the `.env` content `source` into a vector of `Pair{String, String}` key-value pairs.
+Parse the `.env` content `source` into a vector of `Pair{String, Tuple{String, Bool}}` key-value-interpolate pairs.
 """
-function parse(src::IO)
-    results = Pair{String, String}[]
+function _parse(src::IO)
+    results = Pair{String, Tuple{String, Bool}}[]
     for line in eachline(src)
         keyval = tryparseline(line)
         !isnothing(keyval) && push!(results, keyval)
@@ -22,8 +22,16 @@ function parse(src::IO)
     results
 end
 
-parse(src::AbstractString) = parse(IOBuffer(src))
-parse(src::AbstractVector{UInt8}) = parse(IOBuffer(src))
+_parse(src::AbstractString) = _parse(IOBuffer(src))
+_parse(src::AbstractVector{UInt8}) = _parse(IOBuffer(src))
+
+"""
+    parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
+
+Parse the `.env` content `source` into a `Dict{String, String}`.
+"""
+parse(src::Union{<:IO, <:AbstractString, <:AbstractVector{UInt8}}) =
+    Dict{String, String}(Iterators.map(kqv -> first(kqv) => first(last(kqv)), _parse(src)))
 
 """
     tryparseline(line::AbstractString)
@@ -45,7 +53,7 @@ function tryparseline(line::AbstractString)
     value = tryreadvalue(@view sline[valstart:end])
     isnothing(value) && return # malformed_value
     key = String(@view sline[1:keyend-1])
-    key => String(value)
+    key => value
 end
 
 """
@@ -55,7 +63,7 @@ Try to extract the possibly quoted value from `valstring`, which may be
 succeeded by a #-comment.
 """
 function tryreadvalue(valstring::AbstractString)
-    isempty(valstring) && return ""
+    isempty(valstring) && return ("", true)
     valend = if first(valstring) in ('\'', '"')
         quotechr = first(valstring)
         point = nextind(valstring, firstindex(valstring))
@@ -84,11 +92,11 @@ function tryreadvalue(valstring::AbstractString)
     postvalue = findfirst(!isspace, @view valstring[nextind(valstring, valend):end])
     !isnothing(postvalue) && valstring[valend + postvalue] != '#' && return # trailing_garbage
     if first(valstring) == '"'
-        replace((@view valstring[2:valend-1]), "\\n" => '\n', "\\r" => '\r')
+        String(replace((@view valstring[2:valend-1]), "\\n" => '\n', "\\r" => '\r')), true
     elseif first(valstring) == '\''
-        @view valstring[2:valend-1]
+        String(@view valstring[2:valend-1]), false
     else
-        rstrip(@view valstring[1:valend])
+        String(rstrip(@view valstring[1:valend])), true
     end
 end
 
@@ -104,13 +112,13 @@ function load(path::AbstractString = ".env"; override::Bool=false)
         @warn "Dotenv file '$path' does not exist"
         return EnvDict(Dict{String, String}())
     end
-    parsed = Dict(open(parse, path))
-    for (k, v) in parsed
+    parsed = open(_parse, path)
+    for (k, (v, _)) in parsed
         if !haskey(ENV, k) || override
             ENV[k] = v
         end
     end
-    EnvDict(parsed)
+    EnvDict(Dict{String, String}(Iterators.map(kqv -> first(kqv) => first(last(kqv)), parsed)))
 end
 
 @deprecate load(path, override) load(path; override=override)
