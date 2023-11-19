@@ -11,7 +11,7 @@ Base.isempty(ed::EnvDict) = isempty(ed.dict)
 """
     parse(source::Union{IO, AbstractString, AbstractVector{UInt8}})
 
-Parse the `.env` content `source` into a key-value `Dict{String, String}`.
+Parse the `.env` content `source` into a vector of `Pair{String, String}` key-value pairs.
 """
 function parse(src::IO)
     results = Pair{String, String}[]
@@ -19,7 +19,7 @@ function parse(src::IO)
         keyval = tryparseline(line)
         !isnothing(keyval) && push!(results, keyval)
     end
-    Dict(results)
+    results
 end
 
 parse(src::AbstractString) = parse(IOBuffer(src))
@@ -101,8 +101,8 @@ statements from `path`.
 """
 function config(path::AbstractString, override::Bool=false)
     if (isfile(path))
-        parsed = parse(read(path, String))
 
+        parsed = Dict(open(parse, path))
         for (k, v) in parsed
             if(!haskey(ENV, k) || override)
                 ENV[k] = v
