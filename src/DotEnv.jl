@@ -24,11 +24,11 @@ priority:
 - `.env`
 - `.env.production`
 - `.env.test`
-- `.env.deployment`
+- `.env.development`
 - `.env.local`
 - `.env.production.local`
 - `.env.test.local`
-- `.env.deployment.local`
+- `.env.development.local`
 
 If there are no dotenv files in the current directory, `DotEnv.load!()` and
 `DotEnv.unload!()` will look at the parent directory, recursively until dotenv
@@ -65,8 +65,8 @@ module DotEnv
 include("types.jl")
 
 const ENV_FILENAMES = # From <https://github.com/bkeepers/dotenv>, highest priority last
-    [".env",       ".env.production",       ".env.test",       ".env.deployment",
-     ".env.local", ".env.production.local", ".env.test.local", ".env.deployment.local"]
+    [".env",       ".env.production",       ".env.test",       ".env.development",
+     ".env.local", ".env.production.local", ".env.test.local", ".env.development.local"]
 
 const ENV_STACKS = IdDict{AbstractDict{String, String}, Vector{EnvFile}}()
 const ENV_ORIGINALS = IdDict{AbstractDict{String, String}, Dict{String, Union{String, Nothing}}}()
