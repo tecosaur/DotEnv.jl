@@ -62,6 +62,8 @@ For the sake of clarity though, the parsing rules are thus:
 """
 module DotEnv
 
+using PrecompileTools
+
 include("types.jl")
 
 const ENV_FILENAMES = # From <https://github.com/bkeepers/dotenv>, highest priority last
@@ -73,5 +75,7 @@ const ENV_ORIGINALS = IdDict{AbstractDict{String, String}, Dict{String, Union{St
 
 include("parser.jl")
 include("loading.jl")
+
+include("precompile.jl")
 
 end
