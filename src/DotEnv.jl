@@ -8,6 +8,9 @@ files into [`ENV`](@ref).  Storing configuration in the environment is based on
 Please don't store secrets in dotenv files, and if you must at least ensure the
 dotenv file(s) are listed in `.gitignore`.
 
+!!! info "API"
+    `DotEnv`: `load!()`, `unload!()`, `config`, `parse`.
+
 # Quickstart
 
 Use `DotEnv.load!()` to load environment variables, `DotEnv.unload!()` to undo
@@ -66,11 +69,33 @@ using PrecompileTools
 
 include("types.jl")
 
+"""
+    ENV_FILENAMES :: Vector{String}
+
+A list of dotenv file (base)names that should be automatically loaded, from
+least to most authoratative.
+"""
 const ENV_FILENAMES = # From <https://github.com/bkeepers/dotenv>, highest priority last
     [".env",       ".env.production",       ".env.test",       ".env.development",
      ".env.local", ".env.production.local", ".env.test.local", ".env.development.local"]
 
+"""
+    ENV_STACKS :: IdDict{AbstractDict{String, String}, Vector{EnvFile}}
+
+The accumulation of dotenv files applied to environment dicts.
+
+This record allows for reasoning of what would happen if a particular
+environment file was never loaded, for example.
+"""
 const ENV_STACKS = IdDict{AbstractDict{String, String}, Vector{EnvFile}}()
+
+"""
+    ENV_ORIGINALS :: IdDict{AbstractDict{String, String}, Dict{String, Union{String, Nothing}}}
+
+A record of the original values of a particular environment dict.
+
+This is used to record overwritten values, so the original values can be restored later.
+"""
 const ENV_ORIGINALS = IdDict{AbstractDict{String, String}, Dict{String, Union{String, Nothing}}}()
 
 include("parser.jl")

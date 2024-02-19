@@ -1,3 +1,8 @@
+"""
+    struct EnvOverlay{B <: AbstractDict{String, String}} <: AbstractDict{String, String}
+
+A wrapper around a base environment dictionary, that overlays new/changed values.
+"""
 struct EnvOverlay{B <: AbstractDict{String, String}} <: AbstractDict{String, String}
     base::B
     overlay::Dict{String, String}
@@ -20,12 +25,28 @@ Base.length(eo::EnvOverlay) = length(eo.overlay)
 Base.iterate(eo::EnvOverlay) = iterate(eo.overlay)
 Base.iterate(eo::EnvOverlay, i) = iterate(eo.overlay, i)
 
+"""
+    struct EnvEntry
+
+A primitive representation of a single entry of a dotenv file.
+
+It is primitive in the sense that the value is untransformed, no interpolation
+has been performed.
+
+See also: `loadexpand!`, `_parse`.
+"""
 struct EnvEntry
     key::String
     value::String
     interpolate::Bool
 end
 
+"""
+    struct EnvFile
+
+A representation of all of the entries in a particular dotenv file, along with
+whether it should overwrite existing values or not.
+"""
 struct EnvFile
     path::String
     entries::Vector{EnvEntry}

@@ -1,3 +1,9 @@
+"""
+    loadexpand!(dotenv::Dict{String, String}, entry::EnvEntry, fallback::AbstractDict{String, String}=ENV)
+
+Modify `dotenv` to incorperate on `entry`, which will be interpolated (if
+appropriate) using `dotenv` and `fallback`.
+"""
 function loadexpand!(dotenv::Dict{String, String}, entry::EnvEntry, fallback::AbstractDict{String, String}=ENV)
     dotenv[entry.key] = if !entry.interpolate || !occursin('$', entry.value)
         entry.value
@@ -16,6 +22,8 @@ expanding interpolated values with `env`.
 
 Should the file `path` exist, an empty `EnvOverlay` is silently returned.
 """
+function config end
+
 function config(entries::Vector{EnvEntry}; env::AbstractDict{String, String} = ENV, override::Bool = false)
     dotenv = Dict{String, String}()
     for entry in entries
@@ -35,7 +43,7 @@ function config(path::AbstractString = ".env"; env::AbstractDict{String, String}
 end
 
 """
-    load!([env=ENV], path::AbstractString = ""; override::Bool=false)
+    load!([env::AbstractDict{String, String}=ENV], path::AbstractString = ""; override::Bool=false)
 
 Load the dotenv file `path`, or should `path` be a directory every
 `ENV_FILENAME` that lies within it, into `env`.
@@ -43,6 +51,8 @@ Load the dotenv file `path`, or should `path` be a directory every
 Should `override` be set, values already present in `env` will be replaced with
 statements from the dotenv file(s).
 """
+function load! end
+
 function load!(env::AbstractDict{String, String}, files::Vector{<:AbstractString}; override::Bool=false)
     unload!(env, files)
     for file in files
@@ -92,6 +102,8 @@ Unload the dotenv file `path` from `env`, or should `path` be a directory every
 
 When `env` is omitted, `ENV` is used and a `path` defaults to the current directory.
 """
+function unload! end
+
 function unload!(env::AbstractDict{String, String}, files::Vector{<:AbstractString})
     absfiles = map(abspath, files)
     (!haskey(ENV_STACKS, env) || !any(e -> e.path in absfiles, ENV_STACKS[env])) && return env
