@@ -85,7 +85,7 @@ function tryreadvalue(valstring::AbstractString)
     postvalue = findfirst(!isspace, @view valstring[nextind(valstring, valend):end])
     !isnothing(postvalue) && valstring[valend + postvalue] != '#' && return # trailing_garbage
     if first(valstring) == '"'
-        String(replace((@view valstring[2:prevind(valstring, valend)]), "\\n" => '\n', "\\r" => '\r')), true
+        unescape_string(view(valstring, 2:prevind(valstring, valend)), ('{', '}', '$')), true
     elseif first(valstring) == '\''
         String(@view valstring[2:prevind(valstring, valend)]), false
     else
