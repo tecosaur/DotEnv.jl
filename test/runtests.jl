@@ -51,12 +51,18 @@ end
 
 @testset "Interpolation" begin
     @test interpolate("hello", Dict{String, String}(), ENV) == "hello"
+    @test interpolate("hi\$there", Dict{String, String}(), ENV) == "hi"
+    @test interpolate("hi\\\$there", Dict{String, String}(), ENV) == "hi\$there"
+    @test interpolate("hi\\0there", Dict{String, String}(), ENV) == "hi\\0there"
     @test interpolate("hello \$USER", Dict{String, String}(), ENV) == "hello $the_user"
     @test interpolate("hello \$USER", Dict{String, String}("USER" => "fred"), ENV) == "hello fred"
+    @test interpolate("hello \${USER:-alice}", Dict{String, String}("USER" => "fred"), ENV) == "hello fred"
     @test interpolate("hello \${USER}", Dict{String, String}(), ENV) == "hello $the_user"
     @test interpolate("hello \$USER.", Dict{String, String}(), ENV) == "hello $the_user."
     @test interpolate("hello \$USERR", Dict{String, String}(), ENV) == "hello "
     @test interpolate("hello \${USERR:-you}", Dict{String, String}(), ENV) == "hello you"
+    @test interpolate("hello \${USERR:-you\\\\}", Dict{String, String}(), ENV) == "hello you\\\\"
+    @test interpolate("hello \${USERR:-you\\}\\\$\\{}", Dict{String, String}(), ENV) == "hello you}\${"
     @test interpolate("hello \${USERR:-\$USER}", Dict{String, String}(), ENV) == "hello $the_user"
     @test interpolate("hello \${USERR:-\${USERR:-you}}", Dict{String, String}(), ENV) == "hello you"
     @test interpolate("hello \${USERR:-\${USERR:-\$USER}}", Dict{String, String}(), ENV) == "hello $the_user"

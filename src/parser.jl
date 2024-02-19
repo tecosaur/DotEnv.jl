@@ -112,6 +112,8 @@ function interpolate(value::String, dotenv::Dict{String, String}, fallback::Abst
         point = nextind(value, point)
         if escaped
             escaped = false
+            value[point] in ('{', '}', '$') || write(interpval, '\\')
+            write(interpval, value[point])
             continue
         elseif value[point] == '\\'
             escaped = true
