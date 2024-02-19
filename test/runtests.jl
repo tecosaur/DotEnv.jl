@@ -200,6 +200,12 @@ end
     load!(myenv2, ".env.local")
     load!(myenv2, ".env")
     @test myenv1 == myenv2
+    unload!(myenv1)
+    @test isempty(myenv1)
+    load!(myenv1)
+    unload!(myenv1, "")
+    @test isempty(myenv1)
+    load!(myenv1)
     myenv3 = Dict{String, String}()
     load!(myenv3, override=true)
     @test myenv1 == myenv3
