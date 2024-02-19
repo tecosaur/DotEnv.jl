@@ -77,7 +77,7 @@ function tryreadvalue(valstring::AbstractString)
     else
         commentstart = findfirst('#', valstring)
         if !isnothing(commentstart)
-            commentstart - 1
+            prevind(valstring, commentstart)
         else
             lastindex(valstring)
         end
@@ -85,9 +85,9 @@ function tryreadvalue(valstring::AbstractString)
     postvalue = findfirst(!isspace, @view valstring[nextind(valstring, valend):end])
     !isnothing(postvalue) && valstring[valend + postvalue] != '#' && return # trailing_garbage
     if first(valstring) == '"'
-        String(replace((@view valstring[2:valend-1]), "\\n" => '\n', "\\r" => '\r')), true
+        String(replace((@view valstring[2:prevind(valstring, valend)]), "\\n" => '\n', "\\r" => '\r')), true
     elseif first(valstring) == '\''
-        String(@view valstring[2:valend-1]), false
+        String(@view valstring[2:prevind(valstring, valend)]), false
     else
         String(rstrip(@view valstring[1:valend])), true
     end
