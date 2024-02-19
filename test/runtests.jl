@@ -1,7 +1,7 @@
 module TestDotEnv
 
 using Test
-using DotEnv: DotEnv, EnvEntry, parse, _parse, tryparseline, interpolate, config, load!, unload!
+using DotEnv: DotEnv, EnvOverlay, EnvEntry, parse, _parse, tryparseline, interpolate, config, load!, unload!
 
 # There is no "USER" variable on windows.
 the_user = haskey(ENV, "USER") ? ENV["USER"] : "WINDOWS"
@@ -75,10 +75,10 @@ end
     @test config(".env.local").overlay == Dict("CUSTOMVAL123"=>"yes")
     @test config(".env.local", override=true).overlay == Dict("USER"=>"replaced value", "CUSTOMVAL123"=>"yes")
 
-    @test config("nonexistentfile.env") isa Any # No error
+    @test config("nonexistentfile.env") == EnvOverlay(ENV, Dict{String, String}()) # No error
 
     #length of returned values
-    @test length(config(".env", override=true).overlay) == 10
+    @test length(config(".env", override=true).overlay) == length(config(".env", override=true)) == 10
 
     #shouldn't replace ENV vars
     cfg = config(".env.local")
@@ -99,7 +99,7 @@ end
     @test !haskey(cfg.overlay, "SOME_RANDOM_KEY")
     @test cfg["SOME_RANDOM_KEY"] == "abc"
     @test haskey(cfg, "SOME_RANDOM_KEY")
-    @test ("SOME_RANDOM_KEY" => "abc") in cfg
+    @test in(cfg, "SOME_RANDOM_KEY" => "abc")
     @test get(cfg, "OTHER_RANDOM_KEY", "zxc") == "zxc"
     @test !isempty(cfg)
     @test_throws KeyError cfg["NON_EXISTENT_KEY"]
