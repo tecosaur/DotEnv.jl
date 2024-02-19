@@ -11,9 +11,10 @@ cd(@__DIR__)
 
 @testset "Parsing" begin
     #comment
-    @test _parse("#HIMOM") isa Vector{EnvEntry}
-    @test parse("#HIMOM") isa Dict{String, String}
-    @test tryparseline("#HIMOM") === nothing
+    @test _parse("#comment") == EnvEntry[]
+    @test parse("#comment") == Dict{String, String}()
+    @test tryparseline("#comment") === nothing
+    @test tryparseline("TEST=1 # comment") == EnvEntry("TEST", "1", true)
 
     #spaces without quotes
     @test count(' ', tryparseline("TEST=hi  the  re").value) == 4
