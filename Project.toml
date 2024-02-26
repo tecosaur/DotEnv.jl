@@ -1,7 +1,7 @@
 name = "DotEnv"
 uuid = "4dc1fcf4-5e3b-5448-94ab-0c38ec0385c1"
-authors = ["Valentín Mari"]
-version = "0.3.1"
+authors = ["TEC <tec@tecosaur.com>", "Valentín Mari"]
+version = "1.0.0"
 
 [deps]
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
